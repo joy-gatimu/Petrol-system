@@ -1,81 +1,77 @@
 import { useEffect, useState } from "react";
 import { dashboardData, money, litres, dateFmt } from "../api";
-import { Table, StatusBadge, Alert } from "../components/ui";
+import { Table, StatusBadge } from "../components/ui";
 
 export default function Dashboard() {
   const today = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(null);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    dashboardData(today)
-      .then(setData)
-      .catch((e) => setError(e.message));
+    dashboardData(today).then(setData);
   }, [today]);
 
-  if (error) return <Alert type="error">{error}</Alert>;
-  if (!data) return <p>Loading…</p>;
+  if (!data) return <div className="text-slate-500">Loading dashboard...</div>;
 
-  const open = data.recon.filter((r) => r.status !== "balanced");
+  const openDiscrepancies = data.recon.filter((r) => r.status !== "balanced");
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Kpi label="Litres sold today" value={litres(data.totalLitres)} />
-        <Kpi label="Sales today" value={money(data.totalSales)} />
-        <Kpi label="Open discrepancies" value={open.length} />
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
+        <p className="text-slate-500 text-sm mt-1">Snapshot for {dateFmt(today)}</p>
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">Tank levels (latest dip)</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 border-t-blue-500">
+          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Total Sales Today</p>
+          <p className="text-3xl font-bold text-slate-800 mt-2">{money(data.totalSales)}</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 border-t-emerald-500">
+          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Volume Sold</p>
+          <p className="text-3xl font-bold text-slate-800 mt-2">{litres(data.totalLitres)}</p>
+        </div>
+        <div className={`bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 ${openDiscrepancies.length > 0 ? "border-t-red-500" : "border-t-slate-300"}`}>
+          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Stock Discrepancies</p>
+          <p className={`text-3xl font-bold mt-2 ${openDiscrepancies.length > 0 ? "text-red-600" : "text-slate-800"}`}>
+            {openDiscrepancies.length}
+          </p>
+        </div>
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-800 mb-4">Tank Levels</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {data.tankCapacities.map((t) => {
           const dip = data.dips.find((d) => d.tank_id === t.tank_id);
-          const pct = dip
-            ? Math.round((dip.closing_litres / t.capacity_litres) * 100)
-            : 0;
+          const pct = dip ? Math.round((dip.closing_litres / t.capacity_litres) * 100) : 0;
+          const barColor = pct < 20 ? "bg-red-500" : pct < 50 ? "bg-amber-500" : "bg-emerald-500";
           return (
-            <div key={t.tank_id} className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm font-semibold">{t.tank_name}</p>
-              <div className="w-full h-3 bg-slate-200 rounded mt-3">
-                <div
-                  className="h-3 bg-blue-500 rounded"
-                  style={{ width: `${Math.min(pct, 100)}%` }}
-                />
+            <div key={t.tank_id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold text-slate-700">{t.tank_name} <span className="text-slate-400 font-normal">({t.fuelName})</span></p>
+                <span className="text-sm font-semibold text-slate-600">{pct}%</span>
               </div>
-              <p className="text-xs text-slate-500 mt-2">{pct}% full</p>
+              <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full ${barColor} rounded-full`} style={{ width: `${Math.min(pct, 100)}%` }} />
+              </div>
+              <p className="text-xs text-slate-500 mt-2 text-right">{dip ? litres(dip.closing_litres) : "No dip"} / {litres(t.capacity_litres)}</p>
             </div>
           );
         })}
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">
-        Recent shortages / surpluses
-      </h2>
-      <Table
-        columns={[
-          { key: "recon_date", label: "Date", render: (r) => dateFmt(r.recon_date) },
-          { key: "tank_name", label: "Tank" },
-          {
-            key: "variance",
-            label: "Variance (L)",
-            align: "right",
-            render: (r) => `${r.variance > 0 ? "+" : ""}${r.variance.toFixed(2)}`,
-          },
-          { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
-        ]}
-        rows={data.recon.filter((r) => r.status !== "balanced")}
-      />
-    </div>
-  );
-}
-
-function Kpi({ label, value }) {
-  return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <p className="text-slate-500 text-sm">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <h2 className="text-lg font-bold text-slate-800 mb-4">Recent Loss Alerts</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <Table
+          columns={[
+            { key: "recon_date", label: "Date", render: (r) => dateFmt(r.recon_date) },
+            { key: "tank_name", label: "Tank" },
+            { key: "variance", label: "Variance (L)", align: "right", render: (r) => <span className={r.variance < 0 ? "text-red-600 font-bold" : "text-amber-600 font-bold"}>{r.variance > 0 ? "+" : ""}{r.variance.toFixed(2)}</span> },
+            { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
+          ]}
+          rows={openDiscrepancies}
+          empty="No shortages or surpluses detected today. Perfectly balanced!"
+        />
+      </div>
     </div>
   );
 }

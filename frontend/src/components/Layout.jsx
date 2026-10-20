@@ -1,8 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearToken } from "../api";
 
-const base = "block px-3 py-2 rounded text-sm text-slate-200 hover:bg-slate-700";
-const active = "bg-slate-700 text-white font-semibold";
+const base = "flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-150 text-slate-300 hover:bg-slate-700 hover:text-white";
+const active = "bg-blue-600 text-white shadow-md";
 
 export default function Layout({ user, onLogout }) {
   const nav = useNavigate();
@@ -16,18 +16,20 @@ export default function Layout({ user, onLogout }) {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-100">
-      <aside className="w-60 bg-slate-800 p-4 flex flex-col">
-        <div className="mb-8">
-          <h2 className="text-white font-bold">Petrol Station</h2>
-          <p className="text-slate-400 text-xs">Sales & Stock</p>
+    <div className="min-h-screen flex bg-slate-50 font-sans">
+      <aside className="w-64 bg-slate-900 flex flex-col shadow-xl z-10">
+        <div className="p-6 border-b border-slate-800">
+          <h2 className="text-white text-xl font-bold tracking-tight">Petrol Station</h2>
+          <p className="text-blue-400 text-xs font-semibold uppercase tracking-wider mt-1">Sales & Stock System</p>
         </div>
-        <nav className="space-y-1 flex-1">
+        
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2">Operations</p>
           <NavLink to="/dashboard" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
             Dashboard
           </NavLink>
           <NavLink to="/readings" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-            Record Readings
+            Daily Data Entry
           </NavLink>
           <NavLink to="/reconciliation" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
             Reconciliation
@@ -35,40 +37,43 @@ export default function Layout({ user, onLogout }) {
           <NavLink to="/reports" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
             Reports
           </NavLink>
+
           {isAdmin && (
-            <NavLink to="/setup" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-              Pumps, Tanks & Prices
-            </NavLink>
+            <>
+              <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-6">Administration</p>
+              <NavLink to="/setup" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
+                Station Setup
+              </NavLink>
+              <NavLink to="/users" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
+                User Management
+              </NavLink>
+              <NavLink to="/audit" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
+                Audit Log
+              </NavLink>
+            </>
           )}
-          {isAdmin && (
-            <NavLink to="/users" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-              Users
-            </NavLink>
-          )}
-          {isAdmin && (
-            <NavLink to="/audit" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-              Audit Log
-            </NavLink>
-          )}
-          <NavLink to="/help" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-            Help
-          </NavLink>
         </nav>
-        <div className="border-t border-slate-700 pt-4">
-          <p className="text-slate-300 text-sm mb-2">
-            {user?.full_name}{" "}
-            <span className="text-xs text-slate-400">({user?.role})</span>
-          </p>
-          <button
-            onClick={logout}
-            className="bg-white text-slate-800 text-sm rounded px-3 py-1.5 font-semibold"
-          >
-            Log out
+
+        <div className="p-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+              {user?.full_name?.charAt(0) || "U"}
+            </div>
+            <div>
+              <p className="text-white text-sm font-semibold">{user?.full_name}</p>
+              <p className="text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
+            </div>
+          </div>
+          <button onClick={logout} className="w-full bg-slate-800 text-white text-sm rounded-lg py-2 font-semibold hover:bg-slate-700 transition">
+            Sign out
           </button>
         </div>
       </aside>
+      
       <main className="flex-1 p-8 overflow-y-auto">
-        <Outlet />
+        <div className="max-w-7xl mx-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

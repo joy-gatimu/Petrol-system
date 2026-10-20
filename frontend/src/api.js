@@ -260,5 +260,32 @@ export async function dashboardData(date) {
   const totalSales = todayReadings.reduce((s, r) => s + r.sales_value, 0);
   const recon = await runStockReconciliation(date);
   const dips = M.dips.filter((d) => d.dip_date === date);
-  return { totalLitres, totalSales, recon, dips, tankCapacities: M.tanks };
+  
+  // NEW: Attach the fuel name to each tank so the Dashboard can show it
+  const enrichedTanks = M.tanks.map(tank => {
+    const fuel = M.fuelTypes.find(f => f.fuel_type_id === tank.fuel_type_id);
+    return { ...tank, fuelName: fuel ? fuel.name : "Unknown" };
+  });
+
+  return { totalLitres, totalSales, recon, dips, tankCapacities: enrichedTanks };
+}
+
+export async function getSalesTrend() {
+  if (!MOCK) return request("/reports/sales-trend");
+  await delay();
+  // Generate a fake 7-day trend for the chart
+  const trend = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayReadings = M.readings.filter(r => r.reading_date === dateStr);
+    const sales = dayReadings.reduce((s, r) => s + r.sales_value, 0);
+    
+    trend.push({
+      date: d.toLocaleDateString("en-GB", { weekday: "short" }), // e.g. "Mon"
+      sales: sales > 0 ? sales : Math.floor(Math.random() * 50000) + 80000 // Add random data if no reading exists
+    });
+  }
+  return trend;
 }

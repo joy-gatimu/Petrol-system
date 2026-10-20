@@ -32,20 +32,30 @@ export const suppliers = [
   { supplier_id: 1, name: "Vivo Energy", phone: "0700000000" },
 ];
 
+// PAST DATA (yesterday and before)
 export const readings = [
   { reading_id: 1, pump_id: 1, reading_date: "2026-10-14", opening_meter: 124900, closing_meter: 125430, unit_price: 205, litres_dispensed: 530, sales_value: 108650 },
   { reading_id: 2, pump_id: 2, reading_date: "2026-10-14", opening_meter: 88120, closing_meter: 88640.5, unit_price: 195, litres_dispensed: 520.5, sales_value: 106702.5 },
   { reading_id: 3, pump_id: 1, reading_date: "2026-10-13", opening_meter: 124380, closing_meter: 124900, unit_price: 205, litres_dispensed: 520, sales_value: 106600 },
+  // TODAY'S DATA (matches 2026-10-20 in the Dashboard/Reconciliation)
+  { reading_id: 4, pump_id: 1, reading_date: "2026-10-20", opening_meter: 125430, closing_meter: 125880, unit_price: 205, litres_dispensed: 450, sales_value: 92250 },
+  { reading_id: 5, pump_id: 2, reading_date: "2026-10-20", opening_meter: 88640.5, closing_meter: 88990.5, unit_price: 195, litres_dispensed: 350, sales_value: 68250 },
 ];
 
 export const dips = [
-  { dip_id: 1, tank_id: 1, dip_date: "2026-10-15", opening_litres: 12000, closing_litres: 10172 },
-  { dip_id: 2, tank_id: 2, dip_date: "2026-10-15", opening_litres: 9500, closing_litres: 11492 },
-  { dip_id: 3, tank_id: 3, dip_date: "2026-10-15", opening_litres: 2100, closing_litres: 1918 },
+  { dip_id: 1, tank_id: 1, dip_date: "2026-10-14", opening_litres: 12000, closing_litres: 10172 },
+  { dip_id: 2, tank_id: 2, dip_date: "2026-10-14", opening_litres: 9500, closing_litres: 11492 },
+  { dip_id: 3, tank_id: 3, dip_date: "2026-10-14", opening_litres: 2100, closing_litres: 1918 },
+  // TODAY'S DIPS
+  { dip_id: 4, tank_id: 1, dip_date: "2026-10-20", opening_litres: 10172, closing_litres: 9722 }, // Balanced (10172 - 450 = 9722)
+  { dip_id: 5, tank_id: 2, dip_date: "2026-10-20", opening_litres: 11492, closing_litres: 16000 }, // Surplus (Delivery arrived)
+  { dip_id: 6, tank_id: 3, dip_date: "2026-10-20", opening_litres: 1918, closing_litres: 1900 }, // Shortage (Should be 1918 - 0 = 1918, but is 1900)
 ];
 
 export const deliveries = [
-  { delivery_id: 1, tank_id: 2, supplier_id: 1, delivery_date: "2026-10-15", litres_received: 5000, delivery_note_no: "DN-1001" },
+  { delivery_id: 1, tank_id: 2, supplier_id: 1, delivery_date: "2026-10-14", litres_received: 5000, delivery_note_no: "DN-1001" },
+  // TODAY'S DELIVERY
+  { delivery_id: 2, tank_id: 2, supplier_id: 1, delivery_date: "2026-10-20", litres_received: 4858, delivery_note_no: "DN-1025" },
 ];
 
 export const auditLogs = [
