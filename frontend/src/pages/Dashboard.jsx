@@ -5,44 +5,53 @@ import { Table, StatusBadge } from "../components/ui";
 export default function Dashboard() {
   const today = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(null);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     dashboardData(today).then(setData);
-  }, [today]);
+  }, [today, refresh]);
 
-  if (!data) return <div className="text-slate-500">Loading dashboard...</div>;
+  if (!data) return <div className="text-slate-500 p-8">Loading dashboard...</div>;
 
   const openDiscrepancies = data.recon.filter((r) => r.status !== "balanced");
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
-        <p className="text-slate-500 text-sm mt-1">Snapshot for {dateFmt(today)}</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
+          <p className="text-slate-500 text-sm mt-1">Snapshot for {dateFmt(today)}</p>
+        </div>
+        <button 
+          onClick={() => setRefresh(prev => prev + 1)} 
+          className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-700"
+        >
+          Refresh Data
+        </button>
       </div>
 
+      {/* KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 border-t-blue-500">
-          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Total Sales Today</p>
-          <p className="text-3xl font-bold text-slate-800 mt-2">{money(data.totalSales)}</p>
+        <div className="bg-blue-600 rounded-xl shadow-sm p-6 text-white border border-blue-700">
+          <p className="text-blue-100 text-sm font-semibold uppercase tracking-wider">Total Sales Today</p>
+          <p className="text-3xl font-bold mt-2">{money(data.totalSales)}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 border-t-emerald-500">
-          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Volume Sold</p>
-          <p className="text-3xl font-bold text-slate-800 mt-2">{litres(data.totalLitres)}</p>
+        <div className="bg-emerald-600 rounded-xl shadow-sm p-6 text-white border border-emerald-700">
+          <p className="text-emerald-100 text-sm font-semibold uppercase tracking-wider">Volume Sold</p>
+          <p className="text-3xl font-bold mt-2">{litres(data.totalLitres)}</p>
         </div>
-        <div className={`bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-t-4 ${openDiscrepancies.length > 0 ? "border-t-red-500" : "border-t-slate-300"}`}>
-          <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Stock Discrepancies</p>
-          <p className={`text-3xl font-bold mt-2 ${openDiscrepancies.length > 0 ? "text-red-600" : "text-slate-800"}`}>
-            {openDiscrepancies.length}
-          </p>
+        <div className={`rounded-xl shadow-sm p-6 text-white border ${openDiscrepancies.length > 0 ? "bg-red-600 border-red-700" : "bg-slate-700 border-slate-800"}`}>
+          <p className={`${openDiscrepancies.length > 0 ? "text-red-100" : "text-slate-300"} text-sm font-semibold uppercase tracking-wider`}>Stock Discrepancies</p>
+          <p className="text-3xl font-bold mt-2">{openDiscrepancies.length}</p>
         </div>
       </div>
 
+      {/* TANK LEVELS */}
       <h2 className="text-lg font-bold text-slate-800 mb-4">Tank Levels</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {data.tankCapacities.map((t) => {
           const dip = data.dips.find((d) => d.tank_id === t.tank_id);
-          const pct = dip ? Math.round((dip.closing_litres / t.capacity_litres) * 100) : 0;
+          const pct = dip ? Math.round((Number(dip.closing_litres) / Number(t.capacity_litres)) * 100) : 0;
           const barColor = pct < 20 ? "bg-red-500" : pct < 50 ? "bg-amber-500" : "bg-emerald-500";
           return (
             <div key={t.tank_id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -51,7 +60,7 @@ export default function Dashboard() {
                 <span className="text-sm font-semibold text-slate-600">{pct}%</span>
               </div>
               <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full ${barColor} rounded-full`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
               </div>
               <p className="text-xs text-slate-500 mt-2 text-right">{dip ? litres(dip.closing_litres) : "No dip"} / {litres(t.capacity_litres)}</p>
             </div>
@@ -59,13 +68,14 @@ export default function Dashboard() {
         })}
       </div>
 
+      {/* ALERTS */}
       <h2 className="text-lg font-bold text-slate-800 mb-4">Recent Loss Alerts</h2>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <Table
           columns={[
             { key: "recon_date", label: "Date", render: (r) => dateFmt(r.recon_date) },
             { key: "tank_name", label: "Tank" },
-            { key: "variance", label: "Variance (L)", align: "right", render: (r) => <span className={r.variance < 0 ? "text-red-600 font-bold" : "text-amber-600 font-bold"}>{r.variance > 0 ? "+" : ""}{r.variance.toFixed(2)}</span> },
+            { key: "variance", label: "Variance (L)", align: "right", render: (r) => <span className={r.variance < 0 ? "text-red-600 font-bold" : "text-amber-600 font-bold"}>{r.variance > 0 ? "+" : ""}{Number(r.variance).toFixed(2)}</span> },
             { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
           ]}
           rows={openDiscrepancies}
