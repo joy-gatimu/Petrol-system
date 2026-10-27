@@ -17,12 +17,18 @@ function RequireAuth({ user, children }) {
 }
 
 function RequireAdmin({ user, children }) {
-  const ok = user && (user.role === "admin" || user.role === "super_admin");
-  return ok ? children : <Navigate to="/dashboard" replace />;
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  return isAdmin ? children : <Navigate to="/dashboard" replace />;
+}
+
+function RequireSuperAdmin({ user, children }) {
+  const isSuper = user?.role === "super_admin";
+  return isSuper ? children : <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
-const [user, setUser] = useState(null); 
+  // THIS IS THE FIX: Always start with no user
+  const [user, setUser] = useState(null);
 
   return (
     <Routes>
@@ -37,11 +43,14 @@ const [user, setUser] = useState(null);
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/readings" element={<Readings />} />
-        <Route path="/reconciliation" element={<Reconciliation />} />
         <Route path="/reports" element={<Reports />} />
+        
+        <Route path="/reconciliation" element={<RequireAdmin user={user}><Reconciliation /></RequireAdmin>} />
         <Route path="/setup" element={<RequireAdmin user={user}><Setup /></RequireAdmin>} />
-        <Route path="/users" element={<RequireAdmin user={user}><Users /></RequireAdmin>} />
-        <Route path="/audit" element={<RequireAdmin user={user}><AuditLog /></RequireAdmin>} />
+        
+        <Route path="/users" element={<RequireSuperAdmin user={user}><Users /></RequireSuperAdmin>} />
+        <Route path="/audit" element={<RequireSuperAdmin user={user}><AuditLog /></RequireSuperAdmin>} />
+        
         <Route path="/help" element={<Help />} />
       </Route>
 

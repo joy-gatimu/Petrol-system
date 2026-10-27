@@ -6,13 +6,22 @@ const active = "bg-blue-600 text-white shadow-md";
 
 export default function Layout({ user, onLogout }) {
   const nav = useNavigate();
+  
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "super_admin";
 
   function logout() {
     clearToken();
     localStorage.removeItem("ps_user");
     onLogout?.();
     nav("/login");
+  }
+
+  // Helper to pick a different emoji based on the role
+  function getEmoji(role) {
+    if (role === "super_admin") return "👑"; 
+    if (role === "admin") return "👨🏽‍💼"; 
+    return "👨🏽‍🔧"; 
   }
 
   return (
@@ -31,9 +40,13 @@ export default function Layout({ user, onLogout }) {
           <NavLink to="/readings" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
             Daily Data Entry
           </NavLink>
-          <NavLink to="/reconciliation" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
-            Reconciliation
-          </NavLink>
+          
+          {isAdmin && (
+            <NavLink to="/reconciliation" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
+              Reconciliation
+            </NavLink>
+          )}
+          
           <NavLink to="/reports" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
             Reports
           </NavLink>
@@ -44,6 +57,11 @@ export default function Layout({ user, onLogout }) {
               <NavLink to="/setup" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
                 Station Setup
               </NavLink>
+            </>
+          )}
+
+          {isSuperAdmin && (
+            <>
               <NavLink to="/users" className={({ isActive }) => `${base} ${isActive ? active : ""}`}>
                 User Management
               </NavLink>
@@ -54,11 +72,14 @@ export default function Layout({ user, onLogout }) {
           )}
         </nav>
 
+        {/* USER PROFILE SECTION */}
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
-              {user?.full_name?.charAt(0) || "U"}
+            {/* PROFILE ICON */}
+            <div className="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-xl shadow-inner">
+              {getEmoji(user?.role)}
             </div>
+            {/* NAME & ROLE */}
             <div>
               <p className="text-white text-sm font-semibold">{user?.full_name}</p>
               <p className="text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>

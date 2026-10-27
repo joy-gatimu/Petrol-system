@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import {
   listPumps, listTanks, listSuppliers, listFuelTypes, listPrices,
   listReadings, createReading, listDips, createDip,
-  listDeliveries, createDelivery, deleteReading, deleteDip, deleteDelivery
+  listDeliveries, createDelivery, deleteReading, deleteDip, deleteDelivery,
+  getLastPumpReading
 } from "../api";
 import { Alert } from "../components/ui";
 
@@ -43,38 +44,39 @@ export default function Readings() {
     loadLogs();
   }, [date]);
 
+  // SMART AUTO-FILL FOR PUMP METERS
   useEffect(() => {
-    if (pumpForm.pump_id && date) {
-      const pumpObj = pumps.find(p => p.pump_id === Number(pumpForm.pump_id));
+    if (pumpForm.pump_id) {
+      const pumpIdNum = Number(pumpForm.pump_id);
+      const pumpObj = pumps.find(p => p.pump_id === pumpIdNum);
+      
       if (pumpObj) {
         const tankObj = tanks.find(t => t.tank_id === pumpObj.tank_id);
         const priceObj = prices.find(p => p.fuel_type_id === tankObj?.fuel_type_id);
         if (priceObj) setPumpForm(prev => ({ ...prev, unit_price: priceObj.price_per_litre }));
       }
 
-      listReadings().then(readings => {
-        const past = readings.filter(r => r.pump_id === Number(pumpForm.pump_id) && r.reading_date < date)
-                             .sort((a, b) => new Date(b.reading_date) - new Date(a.reading_date));
-        if (past.length > 0) {
-          setPumpForm(prev => ({ ...prev, opening_meter: past[0].closing_meter }));
-        }
+      getLastPumpReading(pumpIdNum, date).then(res => {
+        setPumpForm(prev => ({ ...prev, opening_meter: res.closing_meter }));
       });
     }
   }, [pumpForm.pump_id, date, pumps, tanks, prices]);
 
+  // SMART AUTO-FILL FOR TANK DIPS
   useEffect(() => {
     if (dipForm.tank_id && date) {
-      const tankObj = tanks.find(t => t.tank_id === Number(dipForm.tank_id));
+      const tankIdNum = Number(dipForm.tank_id);
+      const tankObj = tanks.find(t => t.tank_id === tankIdNum);
       
       listDips().then(dips => {
-        const past = dips.filter(d => d.tank_id === Number(dipForm.tank_id) && d.dip_date < date)
+        const past = dips.filter(d => d.tank_id === tankIdNum && d.dip_date < date)
                          .sort((a, b) => new Date(b.dip_date) - new Date(a.dip_date));
         
-        let openingVal = "";
+        let openingVal = 0;
         if (past.length > 0) {
-          openingVal = past[0].closing_litres;
+          openingVal = Number(past[0].closing_litres);
         } else if (tankObj) {
-          openingVal = tankObj.capacity_litres;
+          openingVal = Number(tankObj.capacity_litres);
         }
 
         listReadings({ date }).then(readings => {
@@ -83,7 +85,7 @@ export default function Readings() {
             const totalSold = readings.filter(r => pumpIds.includes(r.pump_id))
                                       .reduce((sum, r) => sum + Number(r.litres_dispensed), 0);
             
-            const expectedClosing = Number(openingVal) - totalSold;
+            const expectedClosing = openingVal - totalSold;
 
             setDipForm(prev => ({ 
               ...prev, 
@@ -99,6 +101,22 @@ export default function Readings() {
   function getTankLabel(tank) {
     const fuel = fuels.find((f) => f.fuel_type_id === tank.fuel_type_id);
     return `${tank.tank_name} (${fuel ? fuel.name : "Unknown"})`;
+  }
+
+  // Helper to get the right placeholder for the pump
+  function getPumpPlaceholder(pumpId) {
+    if (pumpId === "1") return "e.g. 15500";
+    if (pumpId === "2") return "e.g. 10400";
+    if (pumpId === "3") return "e.g. 5150";
+    return "Enter closing meter";
+  }
+
+  // Helper to get the right placeholder for the tank
+  function getTankPlaceholder(tankId) {
+    if (tankId === "1") return "e.g. 14490";
+    if (tankId === "2") return "e.g. 24500";
+    if (tankId === "3") return "e.g. 9850";
+    return "Enter closing dip";
   }
 
   async function savePump(e) {
@@ -192,12 +210,14 @@ export default function Readings() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-600 block mb-1">Opening Meter</label>
-              <input type="number" step="0.01" required value={pumpForm.opening_meter} onChange={(e) => setPumpForm({ ...pumpForm, opening_meter: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <label className="text-xs font-semibold text-slate-600 block mb-1">Opening Meter (Read-only)</label>
+              <div className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 font-medium cursor-not-allowed">
+                {pumpForm.opening_meter || "Select a pump first"}
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600 block mb-1">Closing Meter</label>
-              <input type="number" step="0.01" required value={pumpForm.closing_meter} onChange={(e) => setPumpForm({ ...pumpForm, closing_meter: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <input type="number" step="0.01" required value={pumpForm.closing_meter} onChange={(e) => setPumpForm({ ...pumpForm, closing_meter: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:bg-white" placeholder={getPumpPlaceholder(pumpForm.pump_id)} />
             </div>
             <div>
               <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5">Save Reading</button>
@@ -252,12 +272,14 @@ export default function Readings() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-600 block mb-1">Opening Dip (L)</label>
-              <input type="number" step="0.01" required value={dipForm.opening_litres} onChange={(e) => setDipForm({ ...dipForm, opening_litres: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <label className="text-xs font-semibold text-slate-600 block mb-1">Opening Dip (Read-only)</label>
+              <div className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 font-medium cursor-not-allowed">
+                {dipForm.opening_litres || "Select a tank first"}
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600 block mb-1">Closing Dip (L)</label>
-              <input type="number" step="0.01" required value={dipForm.closing_litres} onChange={(e) => setDipForm({ ...dipForm, closing_litres: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <input type="number" step="0.01" required value={dipForm.closing_litres} onChange={(e) => setDipForm({ ...dipForm, closing_litres: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:bg-white" placeholder={getTankPlaceholder(dipForm.tank_id)} />
             </div>
             <div>
               <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-2.5">Save Dip</button>
@@ -316,11 +338,11 @@ export default function Readings() {
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600 block mb-1">Litres</label>
-              <input type="number" step="0.01" required value={delForm.litres_received} onChange={(e) => setDelForm({ ...delForm, litres_received: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <input type="number" step="0.01" required value={delForm.litres_received} onChange={(e) => setDelForm({ ...delForm, litres_received: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" placeholder="e.g. 2000" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600 block mb-1">Note/Receipt</label>
-              <input type="text" required value={delForm.delivery_note_no} onChange={(e) => setDelForm({ ...delForm, delivery_note_no: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" />
+              <input type="text" required value={delForm.delivery_note_no} onChange={(e) => setDelForm({ ...delForm, delivery_note_no: e.target.value })} className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-slate-50" placeholder="e.g. DN-001" />
             </div>
             <div>
               <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg py-2.5">Save Delivery</button>

@@ -33,57 +33,41 @@ export async function listSuppliers() { return request("/master/suppliers"); }
 export async function listUsers() { return request("/master/users"); }
 export async function listAuditLogs() { return request("/master/audit"); }
 
+export async function createUser(payload) { return request("/master/users", { method: "POST", body: JSON.stringify(payload) }); }
+
 export async function listReadings({ date } = {}) {
   return request("/readings" + (date ? `?date=${date}` : ""));
 }
-export async function createReading(payload) {
-  return request("/readings/pumps", { method: "POST", body: JSON.stringify(payload) });
+export async function getLastPumpReading(pumpId, date) {
+  return request(`/readings/last/${pumpId}?date=${date}`);
 }
-export async function deleteReading(id) {
-  return request(`/readings/pumps/${id}`, { method: "DELETE" });
-}
+export async function createReading(payload) { return request("/readings/pumps", { method: "POST", body: JSON.stringify(payload) }); }
+export async function deleteReading(id) { return request(`/readings/pumps/${id}`, { method: "DELETE" }); }
 
-export async function listDips({ date } = {}) {
-  return request("/readings/dips" + (date ? `?date=${date}` : ""));
-}
-export async function createDip(payload) {
-  return request("/readings/dips", { method: "POST", body: JSON.stringify(payload) });
-}
-export async function deleteDip(id) {
-  return request(`/readings/dips/${id}`, { method: "DELETE" });
-}
+export async function listDips({ date } = {}) { return request("/readings/dips" + (date ? `?date=${date}` : "")); }
+export async function createDip(payload) { return request("/readings/dips", { method: "POST", body: JSON.stringify(payload) }); }
+export async function deleteDip(id) { return request(`/readings/dips/${id}`, { method: "DELETE" }); }
 
-export async function listDeliveries({ date } = {}) {
-  return request("/readings/deliveries" + (date ? `?date=${date}` : ""));
-}
-export async function createDelivery(payload) {
-  return request("/readings/deliveries", { method: "POST", body: JSON.stringify(payload) });
-}
-export async function deleteDelivery(id) {
-  return request(`/readings/deliveries/${id}`, { method: "DELETE" });
-}
+export async function listDeliveries({ date } = {}) { return request("/readings/deliveries" + (date ? `?date=${date}` : "")); }
+export async function createDelivery(payload) { return request("/readings/deliveries", { method: "POST", body: JSON.stringify(payload) }); }
+export async function deleteDelivery(id) { return request(`/readings/deliveries/${id}`, { method: "DELETE" }); }
 
-export async function runStockReconciliation(date) {
-  return request("/reconciliation/stock?date=" + date);
-}
+export async function runStockReconciliation(date) { return request("/reconciliation/stock?date=" + date); }
+export async function getExpectedCash(date) { return request("/reconciliation/expected-cash?date=" + date); }
+
+export async function getCashReconciliation(date) { return request(`/reconciliation/cash/${date}`); }
+export async function saveCashReconciliation(payload) { return request("/reconciliation/cash", { method: "POST", body: JSON.stringify(payload) }); }
+export async function deleteCashReconciliation(date) { return request(`/reconciliation/cash/${date}`, { method: "DELETE" }); }
 
 export async function dashboardData(date) {
   const [dash, recon] = await Promise.all([
     request("/reconciliation/dashboard?date=" + date),
     request("/reconciliation/stock?date=" + date)
   ]);
-  return { ...dash, recon }; 
+  const reconWithDate = recon.map(r => ({ ...r, recon_date: date }));
+  return { ...dash, recon: reconWithDate }; 
 }
 
-export async function dailyReport(date) {
-  return runStockReconciliation(date);
-}
-
-export async function monthlyReport(year, month) {
-  return []; 
-}
-
-// Dummy function so Dashboard doesn't crash if it imports this
-export async function getSalesTrend() {
-  return [];
-}
+export async function dailyReport(date) { return runStockReconciliation(date); }
+export async function monthlyReport(year, month) { return request(`/reconciliation/monthly?year=${year}&month=${month}`); }
+export async function getSalesTrend() { return []; }

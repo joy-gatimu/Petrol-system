@@ -2,6 +2,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const { logAction } = require('../utils/audit');
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
@@ -13,6 +14,9 @@ router.post('/login', async (req, res) => {
     const user = rows[0];
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) return res.status(401).json({ message: 'Invalid username or password' });
+
+    // LOG THE ACTION
+    await logAction(user.user_id, 'LOGIN', 'users', user.user_id);
 
     const token = jwt.sign({ user_id: user.user_id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '8h' });
     const { password_hash, ...safeUser } = user;
