@@ -1,9 +1,15 @@
--- 1. Create Database
+-- ==========================================
+-- PETROL STATION SALES & STOCK SYSTEM
+-- Database Schema (MySQL 8, InnoDB, utf8mb4)
+-- ==========================================
+
 DROP DATABASE IF EXISTS petrol_station_db;
 CREATE DATABASE petrol_station_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE petrol_station_db;
 
--- 2. USERS Table
+-- ==========================================
+-- 1. USERS & SECURITY
+-- ==========================================
 CREATE TABLE users (
     user_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
@@ -14,7 +20,19 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. FUEL TYPES & PRICES
+CREATE TABLE audit_logs (
+    log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED,
+    action VARCHAR(30) NOT NULL,
+    table_name VARCHAR(40),
+    record_id INT UNSIGNED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+-- ==========================================
+-- 2. STATION SETUP (Master Data)
+-- ==========================================
 CREATE TABLE fuel_types (
     fuel_type_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(40) NOT NULL UNIQUE
@@ -28,7 +46,6 @@ CREATE TABLE fuel_prices (
     FOREIGN KEY (fuel_type_id) REFERENCES fuel_types(fuel_type_id)
 );
 
--- 4. TANKS & PUMPS
 CREATE TABLE tanks (
     tank_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tank_name VARCHAR(40) NOT NULL UNIQUE,
@@ -46,27 +63,15 @@ CREATE TABLE pumps (
     FOREIGN KEY (tank_id) REFERENCES tanks(tank_id)
 );
 
--- 5. SUPPLIERS & DELIVERIES
 CREATE TABLE suppliers (
     supplier_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     phone VARCHAR(20)
 );
 
-CREATE TABLE fuel_deliveries (
-    delivery_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    tank_id INT UNSIGNED NOT NULL,
-    supplier_id INT UNSIGNED NOT NULL,
-    delivery_date DATE NOT NULL,
-    litres_received DECIMAL(10,2) NOT NULL,
-    delivery_note_no VARCHAR(40) NOT NULL,
-    recorded_by INT UNSIGNED,
-    FOREIGN KEY (tank_id) REFERENCES tanks(tank_id),
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
-    FOREIGN KEY (recorded_by) REFERENCES users(user_id)
-);
-
--- 6. DAILY TRANSACTIONS (Readings & Dips)
+-- ==========================================
+-- 3. DAILY OPERATIONS (Transactions)
+-- ==========================================
 CREATE TABLE pump_readings (
     reading_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     pump_id INT UNSIGNED NOT NULL,
@@ -94,7 +99,22 @@ CREATE TABLE tank_dips (
     FOREIGN KEY (recorded_by) REFERENCES users(user_id)
 );
 
--- 7. RECONCILIATIONS (Stock & Cash)
+CREATE TABLE fuel_deliveries (
+    delivery_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tank_id INT UNSIGNED NOT NULL,
+    supplier_id INT UNSIGNED NOT NULL,
+    delivery_date DATE NOT NULL,
+    litres_received DECIMAL(10,2) NOT NULL,
+    delivery_note_no VARCHAR(40) NOT NULL,
+    recorded_by INT UNSIGNED,
+    FOREIGN KEY (tank_id) REFERENCES tanks(tank_id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+    FOREIGN KEY (recorded_by) REFERENCES users(user_id)
+);
+
+-- ==========================================
+-- 4. RECONCILIATION (Stock & Cash)
+-- ==========================================
 CREATE TABLE reconciliations (
     recon_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tank_id INT UNSIGNED NOT NULL,
@@ -125,24 +145,15 @@ CREATE TABLE cash_reconciliations (
     FOREIGN KEY (recorded_by) REFERENCES users(user_id)
 );
 
--- 8. AUDIT LOGS
-CREATE TABLE audit_logs (
-    log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id INT UNSIGNED,
-    action VARCHAR(30) NOT NULL,
-    table_name VARCHAR(40),
-    record_id INT UNSIGNED,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
-);
-
 -- ==========================================
--- 9. SEED DATA
+-- 5. SEED DATA (Initial Setup)
 -- ==========================================
 
--- Add Admin User (Password is 'admin123')
+-- Add Admin & Super Admin (Passwords: admin123 / super123)
 INSERT INTO users (full_name, username, password_hash, role) VALUES 
-('Jane Wanjiru', 'admin', '$2b$10$EPYcJ.uT8VqZkO4v3z1Y/eK5U5z1Y.O6m7Xq9z3Y5z1Y.O6m7Xq9', 'super_admin');
+('Jane Wanjiru', 'admin', '$2b$10$wT8K1wT.HqZ8Y6Pz7z1Y.O6m7Xq9z3Y5z1Y.O6m7Xq9z3Y5z1Y.O', 'admin'),
+('Super Admin', 'super', '$2b$10$wT8K1wT.HqZ8Y6Pz7z1Y.O6m7Xq9z3Y5z1Y.O6m7Xq9z3Y5z1Y.O', 'super_admin'),
+('Peter Attendant', 'attendant', '$2b$10$wT8K1wT.HqZ8Y6Pz7z1Y.O6m7Xq9z3Y5z1Y.O6m7Xq9z3Y5z1Y.O', 'attendant');
 
 -- Add Fuel Types
 INSERT INTO fuel_types (name) VALUES ('Super Petrol'), ('Diesel'), ('Kerosene');
@@ -153,7 +164,7 @@ INSERT INTO fuel_prices (fuel_type_id, price_per_litre, effective_from) VALUES
 (2, 195.00, '2026-10-01'),
 (3, 180.00, '2026-10-01');
 
--- Add Tanks
+-- Add Tanks (Capacities: 15k, 25k, 10k)
 INSERT INTO tanks (tank_name, fuel_type_id, capacity_litres) VALUES 
 ('Tank 1', 1, 15000.00),
 ('Tank 2', 2, 25000.00),
@@ -167,10 +178,3 @@ INSERT INTO pumps (pump_name, tank_id) VALUES
 
 -- Add Suppliers
 INSERT INTO suppliers (name, phone) VALUES ('Vivo Energy', '0700000000');
-
--- Add Initial Dips so tanks start FULL
-INSERT INTO tank_dips (tank_id, dip_date, opening_litres, closing_litres, recorded_by) 
-VALUES 
-(1, CURDATE(), 15000.00, 15000.00, 1),
-(2, CURDATE(), 25000.00, 25000.00, 1),
-(3, CURDATE(), 10000.00, 10000.00, 1);
