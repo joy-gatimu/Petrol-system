@@ -71,4 +71,4 @@ export async function dashboardData(date) {
 
 export async function dailyReport(date) { return runStockReconciliation(date); }
 export async function monthlyReport(year, month) { return request(`/reconciliation/monthly?year=${year}&month=${month}`); }
-export async function getSalesTrend() { return []; }
+export async function getSalesTrend() { return request("/reconciliation/trend"); }

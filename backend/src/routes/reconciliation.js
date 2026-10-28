@@ -49,6 +49,7 @@ router.get('/dashboard', async (req, res) => {
     }));
 
     const enrichedTanks = tanks.map(t => ({ ...t, capacity_litres: Number(t.capacity_litres) }));
+    
     const [cashRecon] = await db.query('SELECT * FROM cash_reconciliations WHERE recon_date = ?', [date]);
     const cashDiscrepancy = cashRecon.length > 0 && cashRecon[0].status !== 'balanced' ? 1 : 0;
 
@@ -136,6 +137,38 @@ router.get('/monthly', async (req, res) => {
     `, [`${prefix}%`]);
     res.json(rows);
   } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+// NEW: 7-Day Sales Trend for the Dashboard Chart
+router.get('/trend', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        reading_date as date, 
+        SUM(sales_value) as sales 
+      FROM pump_readings 
+      GROUP BY reading_date 
+      ORDER BY reading_date DESC 
+      LIMIT 7
+    `);
+    
+    const trend = rows.reverse().map(r => ({
+      date: new Date(r.date).toLocaleDateString("en-GB", { weekday: "short" }),
+      sales: Number(r.sales)
+    }));
+
+    if (trend.length === 0) {
+      return res.json([
+        { date: "Mon", sales: 0 }, { date: "Tue", sales: 0 }, 
+        { date: "Wed", sales: 0 }, { date: "Thu", sales: 0 }, 
+        { date: "Fri", sales: 0 }, { date: "Sat", sales: 0 }, { date: "Sun", sales: 0 }
+      ]);
+    }
+
+    res.json(trend);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 module.exports = router;
