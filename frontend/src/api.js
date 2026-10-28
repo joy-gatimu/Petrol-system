@@ -27,6 +27,7 @@ export async function login(username, password) {
 
 export async function listFuelTypes() { return request("/master/fuel-types"); }
 export async function listPrices() { return request("/master/prices"); }
+export async function updatePrice(payload) { return request("/master/prices", { method: "POST", body: JSON.stringify(payload) }); }
 export async function listTanks() { return request("/master/tanks"); }
 export async function listPumps() { return request("/master/pumps"); }
 export async function listSuppliers() { return request("/master/suppliers"); }

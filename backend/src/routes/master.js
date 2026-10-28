@@ -24,6 +24,20 @@ router.get('/prices', async (req, res) => {
   res.json(rows);
 });
 
+router.post('/prices', async (req, res) => {
+  const { fuel_type_id, price_per_litre, effective_from } = req.body;
+  try {
+    await db.query(
+      'INSERT INTO fuel_prices (fuel_type_id, price_per_litre, effective_from) VALUES (?, ?, ?)',
+      [fuel_type_id, price_per_litre, effective_from]
+    );
+    await logAction(1, 'UPDATE_PRICE', 'fuel_prices', fuel_type_id);
+    res.status(201).json({ message: 'Price updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get('/suppliers', async (req, res) => {
   const [rows] = await db.query('SELECT * FROM suppliers');
   res.json(rows);
@@ -36,7 +50,6 @@ router.get('/users', async (req, res) => {
 
 router.post('/users', async (req, res) => {
   const { full_name, username, password, role } = req.body;
-  
   try {
     const [existing] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
     if (existing.length > 0) return res.status(400).json({ message: 'Username already exists' });
@@ -48,10 +61,7 @@ router.post('/users', async (req, res) => {
       'INSERT INTO users (full_name, username, password_hash, role) VALUES (?, ?, ?, ?)',
       [full_name, username, password_hash, role]
     );
-
-    // LOG THE ACTION (Assuming user_id 1 is the Super Admin creating this)
     await logAction(1, 'CREATE_USER', 'users', result.insertId);
-
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
