@@ -6,8 +6,12 @@ export const money = (n) => "KES " + Number(n || 0).toLocaleString("en-KE", { ma
 export const litres = (n) => Number(n || 0).toLocaleString("en-KE") + " L";
 export const dateFmt = (d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
+// THIS IS THE NEW LINE FOR DEPLOYMENT
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 async function request(path, options = {}) {
-  const res = await fetch("/api" + path, {
+  // Use API_BASE to make the request
+  const res = await fetch(`${API_BASE}/api${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...(getToken() ? { Authorization: "Bearer " + getToken() } : {}),
